@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00ffff">
+<title>My Tasks — App 1</title>
+<style>
+*{box-sizing:border-box}
+:root{
+ --bg:#050505;--panel:#0d0d0d;--panel2:#151515;--text:#fff;--muted:#888;
+ --line:#292929;--accent:#00ffff;--accent2:#fff;--good:#00ff88;
+}
+body{margin:0;padding:18px;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;transition:.25s}
+.app{max-width:760px;margin:auto}
+button,input,select{font:inherit}
+button{border:0;border-radius:9px;padding:10px 14px;background:var(--accent);color:#000;cursor:pointer;font-weight:700}
+button:active{transform:scale(.96)}
+.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{margin:0;font-size:32px}.date{color:var(--muted);margin-top:4px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px;margin:18px 0}
+.progress-top,.section-head,.stats{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.progress-bar{height:11px;background:var(--panel2);border-radius:20px;overflow:hidden;margin-top:12px}
+.progress-fill{height:100%;width:0;background:var(--accent);transition:.35s}
+.section{margin-top:28px}.section-head h2{margin:0;font-size:22px}
+.count{color:var(--muted);font-size:14px}.divider{height:1px;background:var(--line);margin:28px 0}
+.task{display:flex;align-items:center;gap:13px;padding:13px 9px;border-radius:11px;cursor:pointer;transition:.18s}
+.task:hover{background:var(--panel2)}.task:active{transform:scale(.985)}
+.checkbox{width:27px;height:27px;min-width:27px;border:2px solid #666;border-radius:50%;display:grid;place-items:center;transition:.2s}
+.task.completed .checkbox{background:var(--accent);border-color:var(--accent)}
+.task.completed .checkbox:after{content:"✓";color:#000;font-weight:900}
+.task-name{font-size:19px;line-height:1.35;flex:1}
+.delete-button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);padding:6px 9px;font-size:12px;border-radius:7px}
+.task.completed{opacity:.48}.task.completed .task-name{text-decoration:line-through}
+.streak{font-size:13px;color:var(--accent);white-space:nowrap}
+.empty{padding:10px;color:var(--muted)}
+#addPanel{display:none}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #555;background:var(--panel2);color:var(--text);margin-top:6px}
+label{display:block;margin-top:12px;color:#bbb}
+.weekdays{display:flex;flex-wrap:wrap;gap:6px}.weekday{display:flex;align-items:center;gap:3px;padding:7px;border:1px solid #555;border-radius:7px}.weekday input{width:auto;margin:0}
+.form-buttons,.controls{display:flex;gap:8px;margin-top:15px}.controls>*{flex:1}
+.stats{flex-wrap:wrap}.stat{flex:1;min-width:130px;background:var(--panel2);padding:12px;border-radius:10px;text-align:center}.stat b{display:block;font-size:23px;color:var(--accent)}
+.toast{position:fixed;top:14px;left:14px;z-index:20;background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:11px 14px;box-shadow:0 0 25px #000;transform:translateY(-150%);transition:.35s}.toast.show{transform:translateY(0)}
+.toast small{display:block;color:var(--muted)}
+.pop{animation:pop .35s ease}@keyframes pop{50%{transform:scale(1.05)}}
+.confetti{position:fixed;pointer-events:none;font-size:24px;animation:fall 1s forwards;z-index:30}@keyframes fall{to{transform:translateY(160px) rotate(360deg);opacity:0}}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal-head{text-align:center;color:var(--muted);font-size:12px;padding:4px}.day{min-height:54px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px;cursor:pointer}.day.muted{opacity:.25}.day.today{border-color:var(--accent)}.day.complete{box-shadow:inset 0 -4px 0 var(--good)}.day .num{font-size:12px}.day .dot{font-size:16px;color:var(--accent)}
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.achievement{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:10px;position:relative}.achievement.secret{border-style:dashed}.achievement .times{position:absolute;right:9px;top:7px;color:var(--accent);font-weight:800}.achievement .desc{font-size:12px;color:var(--muted);margin-top:3px}.achievement.locked{opacity:.35}
+.history-item{display:flex;justify-content:space-between;gap:10px;padding:9px;border-bottom:1px solid var(--line)}.history-item span:last-child{color:var(--muted)}
+.upcoming-item{padding:9px;border-bottom:1px solid var(--line)}
+.hidden{display:none!important}
+@media(max-width:520px){body{padding:12px}h1{font-size:27px}.task-name{font-size:17px}.ach-grid{grid-template-columns:1fr}.day{min-height:45px}}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="app">
+<div class="header"><div><h1>MY TASKS</h1><div id="dateDisplay" class="date"></div></div><button id="addButton">+ Add</button></div>
+
+<div class="card">
+<div class="progress-top"><b id="progressNumber">0 / 0</b><span id="progressPercent">0%</span></div>
+<div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+<div class="stats" style="margin-top:12px">
+<div class="stat"><b id="totalDone">0</b>Total done</div>
+<div class="stat"><b id="bestStreak">0</b>Best streak</div>
+<div class="stat"><b id="achievementCount">0</b>Achievements</div>
+</div>
+</div>
+
+<div id="lastAchievement" class="card" style="display:none"></div>
+
+<div id="addPanel" class="card">
+<h2>Add Task</h2>
+<label>Task name<input id="taskName" placeholder="Enter task name"></label>
+<label>Type<select id="taskType"><option value="recurring">Recurring task</option><option value="one-time">One-time reminder</option></select></label>
+<div id="dateArea" class="hidden"><label>Due date<input id="dueDate" type="date"></label></div>
+<div id="recurringArea">
+<label>Repeat<select id="frequency"><option value="daily">Every day</option><option value="weekly">Every week</option><option value="every-days">Every X days</option><option value="specific-days">Specific days</option></select></label>
+<div id="everyDaysArea" class="hidden"><label>Every how many days?<input id="everyDays" type="number" min="1" value="2"></label></div>
+<div id="specificDaysArea" class="hidden"><label>Days</label><div class="weekdays">
+<label class="weekday"><input type="checkbox" value="0">Sun</label><label class="weekday"><input type="checkbox" value="1">Mon</label><label class="weekday"><input type="checkbox" value="2">Tue</label><label class="weekday"><input type="checkbox" value="3">Wed</label><label class="weekday"><input type="checkbox" value="4">Thu</label><label class="weekday"><input type="checkbox" value="5">Fri</label><label class="weekday"><input type="checkbox" value="6">Sat</label>
+</div></div></div>
+<div class="form-buttons"><button id="saveTaskButton">Save</button><button id="cancelButton" class="secondary">Cancel</button></div>
+</div>
+
+<div id="taskSections"></div>
+
+<div class="section card"><div class="section-head"><h2>UPCOMING</h2></div><div id="upcoming"></div></div>
+
+<div class="section card"><div class="section-head"><h2>CALENDAR</h2><span id="calendarTitle"></span></div>
+<div class="controls"><button id="prevMonth" class="secondary">←</button><button id="todayMonth" class="secondary">Today</button><button id="nextMonth" class="secondary">→</button></div>
+<div id="calendar" class="calendar" style="margin-top:12px"></div><div id="selectedDay" style="margin-top:12px"></div>
+</div>
+
+<div class="section card"><div class="section-head"><h2>ACHIEVEMENTS</h2><span id="achievementSummary"></span></div><div id="achievements" class="ach-grid" style="margin-top:12px"></div></div>
+
+<div class="section card"><div class="section-head"><h2>HISTORY</h2></div>
+<div class="controls"><input id="historySearch" placeholder="Search history..."><select id="historyFilter"><option value="all">All</option><option value="completed">Completed</option></select></div>
+<div id="history" style="margin-top:10px"></div></div>
+</div>
+
+<script>
+const originalTasks=[
+{id:"bible",name:"Bible",frequency:"daily"},
+{id:"deo",name:"Deo",frequency:"daily"},
+{id:"backflip",name:"Backflip + OUTSIDE",frequency:"weekly"},
+{id:"workout",name:"Work out + drums",frequency:"weekly"},
+{id:"cq",name:"CQ",frequency:"weekly"},
+{id:"piano-weekly",name:"Piano",frequency:"weekly"},
+{id:"code",name:"Code",frequency:"weekly"},
+{id:"shower",name:"SHOWER",frequency:"specific-days",days:[2,4,6]}
+];
+
+const themes={
+"Cyan":{bg:"#050505",panel:"#0d0d0d",panel2:"#151515",text:"#fff",muted:"#888",line:"#292929",accent:"#00ffff",good:"#00ff88"},
+"Magenta":{bg:"#080008",panel:"#130013",panel2:"#1d0a1d",text:"#fff",muted:"#aa88aa",line:"#382038",accent:"#ff00ff",good:"#ff66ff"},
+"Dark":{bg:"#050505",panel:"#0d0d0d",panel2:"#151515",text:"#fff",muted:"#888",line:"#292929",accent:"#ffffff",good:"#ffffff"},
+"Light":{bg:"#f3f3f3",panel:"#fff",panel2:"#e8e8e8",text:"#111",muted:"#666",line:"#ccc",accent:"#111",good:"#111"},
+"Red":{bg:"#080000",panel:"#140707",panel2:"#211010",text:"#fff",muted:"#aa8888",line:"#402020",accent:"#ff3030",good:"#ff6060"},
+"Green":{bg:"#001006",panel:"#07160b",panel2:"#0d2112",text:"#fff",muted:"#88aa91",line:"#23452c",accent:"#00ff66",good:"#00ff66"},
+"Blue":{bg:"#00070f",panel:"#07111d",panel2:"#0d1b2b",text:"#fff",muted:"#8799ad",line:"#203a55",accent:"#3498ff",good:"#5fb0ff"},
+"Purple":{bg:"#08000f",panel:"#12071d",panel2:"#1c0d2c",text:"#fff",muted:"#a08aaa",line:"#3d2550",accent:"#a855ff",good:"#c084ff"},
+"Orange":{bg:"#100700",panel:"#1b0d05",panel2:"#281508",text:"#fff",muted:"#b09580",line:"#4b301c",accent:"#ff8a00",good:"#ffb347"}
+};
+let state=load("taskState",{completions:{},events:[],undo:null,theme:"Cyan"});
+let calendarDate=new Date();
+
+function load(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}}
+function save(){localStorage.setItem("taskState",JSON.stringify(state))}
+function dateStr(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function weekStr(d=new Date()){let x=new Date(d),day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return dateStr(x)}
+function fromStr(s){return new Date(s+"T00:00:00")}
+function daysBetween(a,b){return Math.floor((b-a)/86400000)}
+function occurrence(t,d=new Date()){return t.frequency==="weekly"?weekStr(d):dateStr(d)}
+function allTasks(){const deleted=load("deletedTasks",[]);return [...originalTasks,...load("customTasks",[])].filter(t=>!deleted.includes(t.id))}
+function removeTask(id,name){let deleted=load("deletedTasks",[]);if(!deleted.includes(id))deleted.push(id);localStorage.setItem("deletedTasks",JSON.stringify(deleted));let custom=load("customTasks",[]).filter(t=>t.id!==id);localStorage.setItem("customTasks",JSON.stringify(custom));state.events=state.events.filter(e=>e.id!==id);if(state.completions[id])delete state.completions[id];save();renderAll();showToast("🗑️ Task removed",name)}
+function due(t,d=new Date()){
+if(t.frequency==="daily"||t.frequency==="weekly")return true;
+if(t.frequency==="specific-days")return t.days.includes(d.getDay());
+if(t.frequency==="every-days"){let diff=daysBetween(fromStr(t.startDate),fromStr(dateStr(d)));return diff>=0&&diff%t.interval===0}
+return false
+}
+function isDone(t,d=new Date()){return state.completions[t.id]?.includes(occurrence(t,d))}
+function ensureArray(id){if(!state.completions[id])state.completions[id]=[];return state.completions[id]}
+function totalEvents(){return state.events.length}
+function taskStreak(t){
+let n=0,d=new Date();
+if(t.frequency==="daily"){while(isDone(t,d)){n++;d.setDate(d.getDate()-1)}}
+else if(t.frequency==="weekly"){while(isDone(t,d)){n++;d.setDate(d.getDate()-7)}}
+else if(t.frequency==="specific-days"){
+for(let i=0;i<366;i++){if(due(t,d)){if(isDone(t,d))n++;else break}d.setDate(d.getDate()-1)}
+}else if(t.frequency==="every-days"){
+while(isDone(t,d)){n++;d.setDate(d.getDate()-t.interval)}
+}
+return n
+}
+function bestStreak(t){
+let best=0,cur=0;
+const dates=[...new Set(state.events.filter(e=>e.id===t.id).map(e=>e.date))].sort();
+for(const d of dates){const prev=new Date(d+"T00:00:00");prev.setDate(prev.getDate()-1);if(dates.includes(dateStr(prev)))cur++;else cur=1;best=Math.max(best,cur)}
+return Math.max(best,taskStreak(t))
+}
+function showToast(title,small=""){
+const el=document.getElementById("toast");el.innerHTML=`<b>${title}</b><small>${small}</small>`;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2800)
+}
+function confetti(){
+for(let i=0;i<12;i++){let x=document.createElement("div");x.className="confetti";x.textContent=["✦","◆","★","✧"][i%4];x.style.left=(10+Math.random()*80)+"%";x.style.top=(20+Math.random()*20)+"%";document.body.appendChild(x);setTimeout(()=>x.remove(),1100)}
+}
+function checkAchievements(){
+const done=state.events.length, unique=new Set(state.events.map(e=>e.id)).size;
+let maxStreak=Math.max(0,...allTasks().map(bestStreak));
+const today=state.events.filter(e=>e.date===dateStr()).length;
+const hour=new Date().getHours();
+const defs=achievementDefs();
+for(const a of defs){
+let value=a.calc({done,unique,maxStreak,today,hour});
+const old=state.achievementCounts?.[a.id]||0;
+if(!state.achievementCounts)state.achievementCounts={};
+let level=a.thresholds.filter(x=>value>=x).length;
+if(level>old){state.achievementCounts[a.id]=level;state.lastAchievement={name:a.name,desc:a.desc,time:new Date().toLocaleString()};showToast("🏆 "+a.name,a.desc);confetti()}
+}
+save()
+}
+function achievementDefs(){
+return[
+{id:"first",name:"FIRST BLOOD",desc:"Complete your first task.",thresholds:[1],calc:x=>x.done},
+{id:"ten",name:"WARMING UP",desc:"Complete 10 task occurrences.",thresholds:[10,25,50],calc:x=>x.done},
+{id:"hundred",name:"CENTURY",desc:"Complete 100 occurrences.",thresholds:[100,250,500],calc:x=>x.done},
+{id:"thousand",name:"MACHINE",desc:"Complete 1,000 occurrences.",thresholds:[1000,2500,5000],calc:x=>x.done},
+{id:"variety",name:"POLYMATH",desc:"Complete 5 different tasks.",thresholds:[5,8,9],calc:x=>x.unique},
+{id:"streak3",name:"ON A ROLL",desc:"Reach a 3-occurrence streak.",thresholds:[3,7,14],calc:x=>x.maxStreak},
+{id:"streak30",name:"UNREASONABLE",desc:"Reach a 30-occurrence streak.",thresholds:[30,60,100],calc:x=>x.maxStreak},
+{id:"daily5",name:"FULL SEND",desc:"Complete 5 tasks in one day.",thresholds:[5,7,9],calc:x=>x.today},
+{id:"daily10",name:"TASK DEMON",desc:"Complete 10 tasks in one day.",thresholds:[10],calc:x=>x.today},
+{id:"early",name:"EARLY BIRD",desc:"Complete a task before 7 AM.",thresholds:[1,10],calc:()=>state.events.filter(e=>new Date(e.time).getHours()<7).length},
+{id:"late",name:"NIGHT OWL",desc:"Complete a task after 11 PM.",thresholds:[1,10],calc:()=>state.events.filter(e=>new Date(e.time).getHours()>=23).length},
+{id:"consistency",name:"CONSISTENCY",desc:"Complete tasks on 7 different dates.",thresholds:[7,30,100],calc:()=>new Set(state.events.map(e=>e.date)).size},
+{id:"weekly",name:"WEEK WARRIOR",desc:"Complete 4 weekly tasks in one week.",thresholds:[4],calc:()=>{let w=weekStr();return state.events.filter(e=>e.week===w).length}},
+{id:"shower",name:"CLEAN MACHINE",desc:"Complete SHOWER 10 times.",thresholds:[10,25,50],calc:()=>state.events.filter(e=>e.id==="shower").length},
+{id:"code",name:"THE BUILDER",desc:"Complete Code 10 times.",thresholds:[10,25,100],calc:()=>state.events.filter(e=>e.id==="code").length},
+{id:"alltoday",name:"PERFECT DAY",desc:"Finish every task currently due today.",thresholds:[1],calc:()=>{let ts=allTasks().filter(t=>due(t));return ts.length>0&&ts.every(t=>isDone(t))?1:0}},
+{id:"void",name:"VOID",desc:"Secret achievement. Reach 666 total completions.",thresholds:[666],secret:true,calc:x=>x.done},
+{id:"darkgod",name:"DARK GOD",desc:"Secret achievement. Reach a 100-occurrence streak.",thresholds:[100],secret:true,calc:x=>x.maxStreak},
+{id:"omniscient",name:"OMNISCIENT",desc:"Secret achievement. Complete every original task at least once.",thresholds:[1],secret:true,calc:()=>originalTasks.every(t=>state.events.some(e=>e.id===t.id))?1:0},
+{id:"marathon",name:"MARATHON",desc:"Secret achievement. 25 completions in one week.",thresholds:[25],secret:true,calc:()=>{let w=weekStr();return state.events.filter(e=>e.week===w).length}},
+{id:"ghost",name:"GHOST IN THE MACHINE",desc:"Secret achievement. Complete a task on 13 different dates.",thresholds:[13],secret:true,calc:()=>new Set(state.events.map(e=>e.date)).size},
+{id:"void2",name:"VOID WALKER",desc:"Secret achievement. 1000 total completions.",thresholds:[1000],secret:true,calc:x=>x.done},
+{id:"apex",name:"APEX",desc:"Secret achievement. Have every original task at a 7+ streak.",thresholds:[1],secret:true,calc:()=>originalTasks.every(t=>bestStreak(t)>=7)?1:0}
+]
+}
+function renderAchievements(){
+const box=document.getElementById("achievements"),defs=achievementDefs();box.innerHTML="";
+let unlocked=0;
+for(const a of defs){
+const count=state.achievementCounts?.[a.id]||0;if(count)unlocked++;
+const div=document.createElement("div");div.className="achievement"+(count?"":" locked")+(a.secret?" secret":"");
+div.innerHTML=`<span class="times">${count}×</span><b>${count?"🏆":"🔒"} ${count||!a.secret?a.name:"???"}</b><div class="desc">${count||!a.secret?a.desc:"Secret achievement"}</div>`;
+box.appendChild(div)
+}
+document.getElementById("achievementSummary").textContent=`${unlocked}/${defs.length}`;
+if(state.lastAchievement){let x=document.getElementById("lastAchievement");x.style.display="block";x.innerHTML=`<b>🏆 LAST ACHIEVEMENT</b><div style="font-size:20px;color:var(--accent);margin-top:4px">${state.lastAchievement.name}</div><div>${state.lastAchievement.desc}</div><small style="color:var(--muted)">${state.lastAchievement.time}</small>`}
+}
+function toggle(t,el){
+const key=occurrence(t),arr=ensureArray(t.id),i=arr.indexOf(key);
+state.undo={id:t.id,key,wasDone:i>=0};
+if(i>=0){arr.splice(i,1);state.events=state.events.filter(e=>!(e.id===t.id&&e.occurrence===key));el.classList.remove("completed")}
+else{arr.push(key);state.events.push({id:t.id,name:t.name,date:dateStr(),occurrence:key,week:weekStr(),time:new Date().toISOString()});el.classList.add("completed");el.classList.add("pop");setTimeout(()=>el.classList.remove("pop"),400)}
+save();checkAchievements();renderAll()
+}
+function taskElement(t){
+const el=document.createElement("div");el.className="task"+(isDone(t)?" completed":"");
+el.innerHTML=`<div class="checkbox"></div><div class="task-name">${escape(t.name)}</div>${taskStreak(t)>0?`<span class="streak">🔥 ${taskStreak(t)}</span>`:""}<button class="delete-button" title="Remove task">Delete</button>`;
+el.onclick=()=>toggle(t,el);
+el.querySelector(".delete-button").onclick=e=>{e.stopPropagation();removeTask(t.id,t.name)};
+return el
+}
+function escape(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function section(title,id,tasks){
+let sec=document.createElement("div");sec.className="section";sec.innerHTML=`<div class="section-head"><h2>${title}</h2><span class="count" id="${id}"></span></div><div id="${id}list"></div>`;
+let list=sec.querySelector("div:last-child");let done=0;
+tasks.forEach(t=>{let e=taskElement(t);if(e.classList.contains("completed"))done++;list.appendChild(e)});
+if(!tasks.length)list.innerHTML='<div class="empty">Nothing here.</div>';
+sec.querySelector(`#${id}`).textContent=`${done}/${tasks.length}`;return sec
+}
+function renderTasks(){
+const root=document.getElementById("taskSections");root.innerHTML="";
+let today=allTasks().filter(t=>t.frequency==="daily"&&due(t));
+let weekly=allTasks().filter(t=>t.frequency==="weekly"&&due(t));
+let specific=allTasks().filter(t=>t.frequency==="specific-days"&&due(t));
+let custom=allTasks().filter(t=>!["daily","weekly","specific-days"].includes(t.frequency)&&t.type!=="one-time"&&due(t));
+root.append(section("TODAY","todayCount",today));root.append(divider());
+root.append(section("WEEKLY","weeklyCount",weekly));root.append(divider());
+root.append(section("CERTAIN DAYS","specificCount",specific));root.append(divider());
+root.append(section("CUSTOM","customCount",custom));
+let reminders=allTasks().filter(t=>t.type==="one-time"&&t.dueDate<=dateStr());
+root.append(divider());root.append(section("REMINDERS","reminderCount",reminders.map(t=>({...t,frequency:"daily"}))));
+
+}
+function divider(){let d=document.createElement("div");d.className="divider";return d}
+function renderProgress(){
+let dueTasks=allTasks().filter(t=>due(t)&&t.type!=="one-time"),done=dueTasks.filter(isDone).length,p=dueTasks.length?Math.round(done/dueTasks.length*100):0;
+document.getElementById("progressNumber").textContent=`${done} / ${dueTasks.length}`;document.getElementById("progressPercent").textContent=p+"%";document.getElementById("progressFill").style.width=p+"%";
+document.getElementById("totalDone").textContent=state.events.length;document.getElementById("bestStreak").textContent=Math.max(0,...allTasks().map(bestStreak));document.getElementById("achievementCount").textContent=Object.values(state.achievementCounts||{}).reduce((a,b)=>a+b,0)
+}
+function renderUpcoming(){
+const box=document.getElementById("upcoming");box.innerHTML="";let out=[];
+for(let i=1;i<=14;i++){let d=new Date();d.setDate(d.getDate()+i);for(const t of allTasks()){if(t.type==="one-time"){if(t.dueDate===dateStr(d))out.push([d,t.name])}else if(t.frequency==="specific-days"&&due(t,d))out.push([d,t.name])}}
+out.slice(0,15).forEach(([d,n])=>{let x=document.createElement("div");x.className="upcoming-item";x.innerHTML=`<b>${dateStr(d)}</b> — ${escape(n)}`;box.appendChild(x)});if(!box.children.length)box.innerHTML='<div class="empty">Nothing upcoming.</div>'
+}
+function renderCalendar(){
+const box=document.getElementById("calendar");box.innerHTML="";
+const y=calendarDate.getFullYear(),m=calendarDate.getMonth();document.getElementById("calendarTitle").textContent=calendarDate.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(x=>{let h=document.createElement("div");h.className="cal-head";h.textContent=x;box.appendChild(h)});
+let first=new Date(y,m,1),start=first.getDay(),last=new Date(y,m+1,0).getDate(),prevLast=new Date(y,m,0).getDate();
+for(let i=0;i<42;i++){let n=i-start+1,d=new Date(y,m,n),cell=document.createElement("div");cell.className="day";if(n<1||n>last)cell.classList.add("muted");cell.innerHTML=`<div class="num">${n<1?prevLast+n:n>last?n-last:n}</div>`;
+if(dateStr(d)===dateStr())cell.classList.add("today");
+let events=state.events.filter(e=>e.date===dateStr(d));if(events.length)cell.classList.add("complete"),cell.innerHTML+=`<div class="dot">● ${events.length}</div>`;
+cell.onclick=()=>showDay(d);box.appendChild(cell)}
+}
+function showDay(d){
+const events=state.events.filter(e=>e.date===dateStr(d));document.getElementById("selectedDay").innerHTML=`<b>${d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})}</b><br>${events.length?events.map(e=>"✓ "+escape(e.name)).join("<br>"):"No recorded completions."}`
+}
+function renderHistory(){
+let box=document.getElementById("history"),q=document.getElementById("historySearch").value.toLowerCase();box.innerHTML="";
+state.events.slice().reverse().filter(e=>e.name.toLowerCase().includes(q)).slice(0,150).forEach(e=>{let x=document.createElement("div");x.className="history-item";x.innerHTML=`<span>✓ ${escape(e.name)}</span><span>${e.date}</span>`;box.appendChild(x)});
+if(!box.children.length)box.innerHTML='<div class="empty">No history found.</div>'
+}
+function renderAll(){renderTasks();renderProgress();renderUpcoming();renderCalendar();renderAchievements();renderHistory()}
+function applyTheme(){
+const t=themes[state.theme]||themes.Cyan;for(const [k,v] of Object.entries(t))document.documentElement.style.setProperty("--"+k,v);
+document.querySelector('meta[name="theme-color"]').content=t.accent
+}
+function removeCustom(id){let tasks=load("customTasks",[]).filter(t=>t.id!==id);localStorage.setItem("customTasks",JSON.stringify(tasks));renderAll()}
+document.getElementById("addButton").onclick=()=>{let p=document.getElementById("addPanel");p.style.display=p.style.display==="block"?"none":"block"};
+document.getElementById("cancelButton").onclick=()=>document.getElementById("addPanel").style.display="none";
+document.getElementById("taskType").onchange=e=>{document.getElementById("dateArea").classList.toggle("hidden",e.target.value!=="one-time");document.getElementById("recurringArea").classList.toggle("hidden",e.target.value==="one-time")};
+document.getElementById("frequency").onchange=e=>{document.getElementById("everyDaysArea").classList.toggle("hidden",e.target.value!=="every-days");document.getElementById("specificDaysArea").classList.toggle("hidden",e.target.value!=="specific-days")};
+document.getElementById("saveTaskButton").onclick=()=>{
+let name=document.getElementById("taskName").value.trim();if(!name)return alert("Enter a task name.");
+let t={id:"custom-"+Date.now(),name,type:document.getElementById("taskType").value};
+if(t.type==="one-time"){t.dueDate=document.getElementById("dueDate").value;if(!t.dueDate)return alert("Choose a due date")}
+else{t.frequency=document.getElementById("frequency").value;if(t.frequency==="every-days"){t.interval=+document.getElementById("everyDays").value;t.startDate=dateStr();if(!t.interval)return alert("Enter a valid interval")}if(t.frequency==="specific-days"){t.days=[...document.querySelectorAll(".weekdays input:checked")].map(x=>+x.value);if(!t.days.length)return alert("Choose at least one day")}}
+let a=load("customTasks",[]);a.push(t);localStorage.setItem("customTasks",JSON.stringify(a));document.getElementById("taskName").value="";document.getElementById("addPanel").style.display="none";renderAll()
+};
+document.getElementById("prevMonth").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar()};
+document.getElementById("nextMonth").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar()};
+document.getElementById("todayMonth").onclick=()=>{calendarDate=new Date();renderCalendar()};
+document.getElementById("historySearch").oninput=renderHistory;
+
+document.addEventListener("keydown",e=>{
+if(e.ctrlKey&&e.key.toLowerCase()==="z"||e.metaKey&&e.key.toLowerCase()==="z"){if(state.undo){let t=allTasks().find(x=>x.id===state.undo.id);if(t){let arr=ensureArray(t.id),i=arr.indexOf(state.undo.key);if(state.undo.wasDone&&i<0){arr.push(state.undo.key);state.events.push({id:t.id,name:t.name,date:dateStr(),occurrence:state.undo.key,week:weekStr(),time:new Date().toISOString()})}else if(!state.undo.wasDone&&i>=0){arr.splice(i,1);state.events=state.events.filter(x=>!(x.id===t.id&&x.occurrence===state.undo.key))}state.undo=null;save();renderAll();showToast("↩️ UNDONE")}}}
+});
+
+function initThemeChooser(){
+let c=document.createElement("div");c.className="card";c.innerHTML="<b>THEME</b><select id='themeSelect'></select><small style='color:var(--muted);display:block;margin-top:5px'>Colors are named by their actual color.</small>";
+let sel=c.querySelector("select");Object.keys(themes).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;sel.appendChild(o)});sel.value=state.theme;sel.onchange=()=>{state.theme=sel.value;save();applyTheme();renderAll();showToast("🎨 Theme: "+state.theme)};document.querySelector(".app").insertBefore(c,document.getElementById("addPanel"))
+}
+document.getElementById("dateDisplay").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+applyTheme();initThemeChooser();checkAchievements();renderAll();
+let last=dateStr();setInterval(()=>{if(dateStr()!==last){last=dateStr();document.getElementById("dateDisplay").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"});renderAll()}},30000);
+</script>
+</body>
+</html>
